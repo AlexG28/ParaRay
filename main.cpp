@@ -1,39 +1,25 @@
+#include "common.h"
+#include "hittable.h"
+#include "hittable_list.h"
+#include "sphere.h"
 #include "colour.h"
-#include "vec3.h"
-#include "ray.h"
 
 #include <iostream>
 #include <chrono>
 #include <ctime>
 
-double hit_sphere(const point3& center, double radius, const ray& r){
-    vec3 oc = r.origin() - center;
-
-    auto a = r.direction().length_squared();
-    auto half_b = dot(oc, r.direction());
-    auto c = oc.length_squared() - radius * radius;
-    auto discriminant = half_b * half_b - a * c;
 
 
-    if (discriminant < 0){
-        return -1.0;
-    } else {
-        return (-half_b - sqrt(discriminant) / a);
-    }
-}
 
-
-vec3 ray_colour(const ray& r){
-    auto t = hit_sphere(point3(0,0,-1), 0.5, r);
-
-    if (t > 0){
-        vec3 N = unit_vector(r.at(t) - vec3(0,0,-1));
-        return 0.5 * vec3(N.x() + 1, N.y() + 1, N.z() + 1);
+vec3 ray_color(const ray& r, const hittable& world) {
+    hit_record rec;
+    if (world.hit(r, 0, infinity, rec)) {
+        return 0.5 * (rec.normal + vec3(1,1,1));
     }
 
     vec3 unit_direction = unit_vector(r.direction());
-    auto a = 0.5 * (unit_direction.y() + 1.0);
-    return (1.0-a)*vec3(1.0, 1.0, 1.0) + a*vec3(0.5, 0.3, 0.9);
+    auto a = 0.5*(unit_direction.y() + 1.0);
+    return (1.0-a)*vec3(1.0, 1.0, 1.0) + a*vec3(0.5, 0.7, 1.0);
 }
 
 
@@ -42,6 +28,15 @@ int main() {
     float aspect_ratio = 16.0 / 9.0;
     int image_width = 600;
     int image_height = static_cast<int>(image_width / aspect_ratio);
+
+    hittable_list world;
+    // world.add(make_shared<sphere>(point3(0,0,-1), 0.5));
+    // world.add(make_shared<sphere>(point3(0, 1,-0.8), 0.3));
+    // world.add(make_shared<sphere>(point3(1, -1,-0.8), 0.4));
+    // world.add(make_shared<sphere>(point3(-1, 1,-0.8), 0.5));
+    // world.add(make_shared<sphere>(point3(-1, -1,-0.5), 0.2));
+    world.add(make_shared<sphere>(point3(0,0,-1), 0.5));
+    world.add(make_shared<sphere>(point3(0,-100.5,-1), 100));
 
     auto focal_length = 1.0;
     auto viewport_height = 2.0;
@@ -70,7 +65,7 @@ int main() {
             auto ray_direction = pixel_center - camera_center;
 
             ray r(camera_center, ray_direction);
-            vec3 pixel_colour = ray_colour(r);
+            vec3 pixel_colour = ray_color(r, world);
 
             write_colour(std::cout, pixel_colour);
         }
