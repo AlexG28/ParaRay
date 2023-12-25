@@ -5,6 +5,13 @@
 
 #include <iostream>
 
+
+inline double linear_to_gamma(double linear_component)
+{
+    return sqrt(linear_component);
+}
+
+
 void write_colour(std::ostream &out, vec3 pixel_colour, int samples_per_pixel){
     auto r = pixel_colour.x();
     auto g = pixel_colour.y();
@@ -15,6 +22,11 @@ void write_colour(std::ostream &out, vec3 pixel_colour, int samples_per_pixel){
     r *= scale;
     g *= scale;
     b *= scale;
+
+    // Apply the linear to gamma transform.
+    r = linear_to_gamma(r);
+    g = linear_to_gamma(g);
+    b = linear_to_gamma(b);
 
     // Write the translated [0,255] value of each color component.
     static const interval intensity(0.000, 0.999);
