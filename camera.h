@@ -1,8 +1,8 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <chrono>
-#include <ctime>
+#include <fstream>
+#include <iostream>
 
 #include "common.h"
 #include "colour.h"
@@ -15,6 +15,7 @@ class camera {
     int    image_width       = 100;  // Rendered image width in pixel count
     int    samples_per_pixel = 10;
     int    max_depth = 10;
+    vec3* pixelValues;
 
     double vfov = 90;
     point3 lookfrom = point3(0,0,-1);  // Point camera is looking from
@@ -27,10 +28,18 @@ class camera {
     void render(const hittable& world) {
         initialize();
 
-        std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
+        std::ofstream outputFile("image.ppm");
+
+        if (!outputFile.is_open()) {
+            std::cout << "failure!!!!!";
+            exit(1);
+        }
+
+
+        outputFile << "P3\n" << image_width << ' ' << image_height << "\n255\n";
         
-        auto start = std::chrono::system_clock::now();
-        
+ 
         for (int j = 0; j < image_height; ++j) {
             std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
             for (int i = 0; i < image_width; ++i) {
@@ -39,14 +48,58 @@ class camera {
                     ray r = get_ray(i, j);
                     pixel_color += ray_color(r, max_depth, world);
                 }
-                write_colour(std::cout, pixel_color, samples_per_pixel);
+                // write_colour(std::cout, pixel_color, samples_per_pixel);
+                write_colour_to_file(outputFile, pixel_color, samples_per_pixel);
             }
         }
 
-        auto end = std::chrono::system_clock::now();
-        std::chrono::duration<double> elapsed_seconds = end-start;
+    }
 
-        std::clog << "\n Done! \n" << "Elapsed time: " << elapsed_seconds.count() << "s";
+    void parallel_render(const hittable& world, int threadID) {
+        initialize();
+        int numberOfPixels = image_width * image_height;
+
+        int verticalSliceLength = image_height / 16;
+        int verticalSliceRemainder = image_height % 16; 
+
+        int startPixel = threadID * verticalSliceLength;
+        int sliceLength;
+
+        if (threadID == 15) {
+            sliceLength = verticalSliceLength + verticalSliceRemainder;
+        }
+        else {
+            sliceLength = verticalSliceLength;
+        }
+
+        int pixelPosition;
+        
+        for (int j = startPixel; j < startPixel + sliceLength; ++j) {
+            for (int i = 0; i < image_width; ++i) {
+                vec3 pixel_color(0, 0, 0);
+                for (int sample = 0; sample < samples_per_pixel; ++sample) {
+                    ray r = get_ray(i, j);
+                    pixel_color += ray_color(r, max_depth, world);
+                }
+                int pixelPosition = (j * image_width) + i;
+                pixelValues[pixelPosition] = pixel_color;
+            }
+        }
+    }
+
+    void printBuffer() {
+        std::ofstream outputFile("image.ppm");
+
+        if (!outputFile.is_open()) {
+            std::cout << "failure!!!!!";
+            exit(1);
+        }
+
+        outputFile << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
+        for (int i = 0; i < image_width * image_height; i++) {
+            write_colour_to_file(outputFile, pixelValues[i], samples_per_pixel);
+        }
     }
 
   private:
@@ -92,6 +145,9 @@ class camera {
         auto defocus_radius = focus_dist * tan(degrees_to_radians(defocus_angle / 2));
         defocus_disk_u = u * defocus_radius;
         defocus_disk_v = v * defocus_radius;
+
+        int numberOfPixels = image_height * image_width;
+        pixelValues = static_cast<vec3*>(malloc(sizeof(vec3) * numberOfPixels));
     }
 
     vec3 ray_color(const ray& r, int depth, const hittable& world) const {
