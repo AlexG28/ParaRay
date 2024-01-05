@@ -9,7 +9,7 @@
 #include <iostream>
 #include <chrono>
 #include <ctime>
-
+#include <cstring>
 
 int main(int argc, char* argv[]) {
     

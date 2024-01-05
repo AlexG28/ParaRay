@@ -1,4 +1,3 @@
-a.exe
+*.exe
 image.ppm
 .vscode
-/test
