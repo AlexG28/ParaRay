@@ -11,11 +11,28 @@
 #include <ctime>
 
 
-int main() {
-    renderer2 myRenderer2;
+int main(int argc, char* argv[]) {
+    
+    if (argc == 1 || argc > 2) {
+        std::cout << "please specify how you would like to render the image: \n"; 
+        std::cout << "-m for multi-threaded render\n";
+        std::cout << "-s for single-threaded render\n";
+    }
+    else {
+        renderer2 myRenderer2;
 
-    // myRenderer2.general_render();
+        if (strcmp(argv[1], "-s") == 0) {
+            myRenderer2.general_render();
+        } else if (strcmp(argv[1], "-m") == 0) {
+            myRenderer2.parallel_render();
+        }
+        else {
+            std::cout << "Incorrect arguments.\n";
+            std::cout << "-m for multi-threaded render\n";
+            std::cout << "-s for single-threaded render\n";
+        }
+    }
 
-    myRenderer2.parallel_render();
+    return 0;
 
 }
